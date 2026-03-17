@@ -7,6 +7,7 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Cloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/appStore";
@@ -17,7 +18,10 @@ const navItems = [
   { to: "/rules", icon: Settings2, label: "规则配置" },
   { to: "/sandbox", icon: Lock, label: "沙箱管理" },
   { to: "/log", icon: ClipboardList, label: "操作日志" },
+  { to: "/cloud", icon: Cloud, label: "CheersAI 云端", description: "访问云端AI服务" },
 ];
+
+
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useAppStore();
@@ -59,7 +63,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-2 overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {navItems.map(({ to, icon: Icon, label, description }) => (
           <Tooltip key={to} delayDuration={0}>
             <TooltipTrigger asChild>
               <NavLink
@@ -70,9 +74,16 @@ export function Sidebar() {
                     "group flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 relative",
                     "hover:bg-slate-800/50 hover:text-white hover:shadow-lg hover:shadow-blue-500/10",
                     "active:scale-95",
-                    isActive
-                      ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25 border border-blue-400/20"
-                      : "text-slate-300 hover:text-white border border-transparent"
+                    // CheersAI 云端项使用绿色主题
+                    to === "/cloud" ? (
+                      isActive
+                        ? "bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/25 border border-green-400/20"
+                        : "text-slate-300 hover:text-white border border-transparent hover:bg-gradient-to-r hover:from-green-600/20 hover:to-green-500/20 hover:shadow-green-500/10"
+                    ) : (
+                      isActive
+                        ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25 border border-blue-400/20"
+                        : "text-slate-300 hover:text-white border border-transparent"
+                    )
                   )
                 }
               >
@@ -80,7 +91,10 @@ export function Sidebar() {
                   <>
                     {/* 活跃状态的左侧指示器 */}
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
+                      <div className={cn(
+                        "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full",
+                        to === "/cloud" ? "bg-green-100" : "bg-white"
+                      )} />
                     )}
                     
                     {/* 图标容器 */}
@@ -95,13 +109,28 @@ export function Sidebar() {
                     
                     {/* 文字标签 */}
                     {!sidebarCollapsed && (
-                      <span className="font-medium tracking-wide">{label}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium tracking-wide">{label}</span>
+                        {description && (
+                          <span className={cn(
+                            "text-xs transition-colors duration-200",
+                            isActive 
+                              ? (to === "/cloud" ? "text-green-100" : "text-blue-100")
+                              : "text-slate-500 group-hover:text-slate-300"
+                          )}>
+                            {description}
+                          </span>
+                        )}
+                      </div>
                     )}
                     
-                    {/* 悬停时的右侧箭头 */}
+                    {/* 悬停时的右侧指示器 */}
                     {!sidebarCollapsed && !isActive && (
                       <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          to === "/cloud" ? "bg-green-400 animate-pulse" : "bg-slate-400"
+                        )} />
                       </div>
                     )}
                   </>
@@ -114,7 +143,12 @@ export function Sidebar() {
                 className="bg-slate-800 text-white border-slate-700 shadow-xl"
                 sideOffset={10}
               >
-                {label}
+                <div className="flex flex-col">
+                  <span className="font-medium">{label}</span>
+                  {description && (
+                    <span className="text-xs text-slate-400">{description}</span>
+                  )}
+                </div>
               </TooltipContent>
             )}
           </Tooltip>

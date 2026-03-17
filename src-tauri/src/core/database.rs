@@ -1,10 +1,10 @@
-use sqlx::{sqlite::SqlitePool, Row};
+use sqlx::{sqlite::{SqlitePool, SqlitePoolOptions}, Row};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use std::path::PathBuf;
 use anyhow::Result;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LogEntry {
     pub id: String,
     pub timestamp: DateTime<Utc>,
@@ -16,14 +16,14 @@ pub struct LogEntry {
     pub user_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserSetting {
     pub key: String,
     pub value: String,
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ProcessingHistory {
     pub id: String,
     pub file_path: String,
@@ -37,6 +37,7 @@ pub struct ProcessingHistory {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Clone)]
 pub struct Database {
     pool: SqlitePool,
 }
@@ -46,16 +47,25 @@ impl Database {
     pub async fn new() -> Result<Self> {
         let db_path = get_database_path()?;
         
+        println!("Initializing database at: {}", db_path.display());
+        
         // 确保数据库目录存在
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent)?;
+            println!("Created database directory: {}", parent.display());
         }
         
-        let database_url = format!("sqlite:{}", db_path.display());
-        let pool = SqlitePool::connect(&database_url).await?;
+        // 使用绝对路径并转义特殊字符
+        let database_url = format!("sqlite:{}?mode=rwc", db_path.to_string_lossy());
+        println!("Database URL: {}", database_url);
+        
+        let pool = SqlitePool::connect(&database_url).await
+            .map_err(|e| anyhow::anyhow!("Failed to connect to database: {}", e))?;
+        println!("Database connection established");
         
         let db = Database { pool };
         db.init_tables().await?;
+        println!("Database tables initialized");
         
         Ok(db)
     }
@@ -134,7 +144,9 @@ impl Database {
     
     /// 添加日志条目
     pub async fn add_log(&self, entry: &LogEntry) -> Result<()> {
-        sqlx::query(
+        println!("Adding log to database: {} - {}", entry.level, entry.message);
+        
+        let result = sqlx::query(
             r#"
             INSERT INTO logs (id, timestamp, level, message, details, file_path, operation_type, user_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -149,9 +161,18 @@ impl Database {
         .bind(&entry.operation_type)
         .bind(&entry.user_id)
         .execute(&self.pool)
-        .await?;
+        .await;
         
-        Ok(())
+        match result {
+            Ok(result) => {
+                println!("Log added successfully, rows affected: {}", result.rows_affected());
+                Ok(())
+            },
+            Err(e) => {
+                println!("Failed to add log: {}", e);
+                Err(e.into())
+            }
+        }
     }
     
     /// 获取日志列表
@@ -390,21 +411,30 @@ impl Database {
             .await?;
         
         Ok(serde_json::json!({
-            "total_files": total_files,
-            "successful_files": successful_files,
-            "failed_files": total_files - successful_files,
-            "total_masked_items": total_masked,
-            "total_processing_time_ms": total_time,
-            "recent_files_7days": recent_files,
-            "success_rate": if total_files > 0 { successful_files as f64 / total_files as f64 * 100.0 } else { 0.0 }
+            "totalFiles": total_files,
+            "successfulFiles": successful_files,
+            "failedFiles": total_files - successful_files,
+            "totalMaskedItems": total_masked,
+            "averageProcessingTimeMs": if successful_files > 0 { total_time / successful_files } else { 0 },
+            "recentFiles7days": recent_files,
+            "successRate": if total_files > 0 { successful_files as f64 / total_files as f64 * 100.0 } else { 0.0 }
         }))
     }
 }
 
 /// 获取跨平台数据库路径
-fn get_database_path() -> Result<PathBuf> {
-    let app_data_dir = get_cross_platform_app_data_dir();
-    Ok(app_data_dir.join("cheersai-vault.db"))
+pub fn get_database_path() -> Result<PathBuf> {
+    // 将数据库放在系统临时目录中，避免触发 Tauri 开发模式的文件监控
+    let temp_dir = std::env::temp_dir();
+    let db_path = temp_dir.join("cheersai-vault").join("cheersai-vault.db");
+    
+    // 确保目录存在
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
+    println!("Using database path: {}", db_path.display());
+    Ok(db_path)
 }
 
 /// 获取跨平台应用数据目录
@@ -413,25 +443,103 @@ fn get_cross_platform_app_data_dir() -> PathBuf {
     {
         dirs_next::data_dir()
             .unwrap_or_else(|| PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string())))
-            .join("CheersAI Vault")
+            .join("CheersAI-Vault") // 使用连字符而不是空格
     }
     
     #[cfg(target_os = "macos")]
     {
         dirs_next::data_dir()
             .unwrap_or_else(|| PathBuf::from("~/Library/Application Support"))
-            .join("CheersAI Vault")
+            .join("CheersAI-Vault")
     }
     
     #[cfg(target_os = "linux")]
     {
-        dirs_next::data_dir()
-            .unwrap_or_else(|| PathBuf::from("~/.local/share"))
-            .join("CheersAI Vault")
+        dirs_next::config_dir()
+            .unwrap_or_else(|| PathBuf::from("~/.config"))
+            .join("CheersAI-Vault")
     }
     
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
-        PathBuf::from("./CheersAI Vault")
+        PathBuf::from("./CheersAI-Vault")
     }
+}
+
+// 数据迁移功能
+pub async fn migrate_from_old_database() -> Result<()> {
+    let old_db_path = std::env::current_dir()?.join("cheersai-vault.db");
+
+    if !old_db_path.exists() {
+        println!("No old database found at: {}", old_db_path.display());
+        return Ok(());
+    }
+
+    println!("Found old database at: {}", old_db_path.display());
+    println!("Starting data migration...");
+
+    // 连接到旧数据库
+    let old_db_url = format!("sqlite:{}?mode=ro", old_db_path.display());
+    let old_pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect(&old_db_url)
+        .await?;
+
+    // 连接到新数据库
+    let new_db = Database::new().await?;
+
+    // 迁移日志数据
+    let logs = sqlx::query_as::<_, LogEntry>(
+        "SELECT id, timestamp, level, message, details, file_path, operation_type, user_id FROM logs ORDER BY timestamp"
+    )
+    .fetch_all(&old_pool)
+    .await?;
+
+    println!("Migrating {} log entries...", logs.len());
+    for log in logs {
+        if let Err(e) = new_db.add_log(&log).await {
+            eprintln!("Failed to migrate log entry {}: {}", log.id, e);
+        }
+    }
+
+    // 迁移处理历史数据
+    let histories = sqlx::query_as::<_, ProcessingHistory>(
+        "SELECT id, file_path, output_path, rule_ids, file_size, masked_count, processing_time_ms, status, error_message, created_at FROM processing_history ORDER BY created_at"
+    )
+    .fetch_all(&old_pool)
+    .await?;
+
+    println!("Migrating {} processing history entries...", histories.len());
+    for history in histories {
+        if let Err(e) = new_db.add_processing_history(&history).await {
+            eprintln!("Failed to migrate processing history {}: {}", history.id, e);
+        }
+    }
+
+    // 迁移用户设置数据
+    let settings = sqlx::query_as::<_, UserSetting>(
+        "SELECT key, value, updated_at FROM user_settings"
+    )
+    .fetch_all(&old_pool)
+    .await?;
+
+    println!("Migrating {} user settings...", settings.len());
+    for setting in settings {
+        if let Err(e) = new_db.save_setting(&setting.key, &setting.value).await {
+            eprintln!("Failed to migrate user setting {}: {}", setting.key, e);
+        }
+    }
+
+    old_pool.close().await;
+
+    // 备份旧数据库文件
+    let backup_path = old_db_path.with_extension("db.backup");
+    if let Err(e) = std::fs::rename(&old_db_path, &backup_path) {
+        eprintln!("Failed to backup old database: {}", e);
+    } else {
+        println!("Old database backed up to: {}", backup_path.display());
+    }
+
+    println!("Data migration completed successfully!");
+    Ok(())
 }

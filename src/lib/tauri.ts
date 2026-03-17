@@ -135,4 +135,12 @@ export const tauriCommands = {
 
   getDatabaseInfo: () =>
     invoke<any>("get_database_info"),
+
+  // Database Migration
+  migrateOldDatabase: () =>
+    invoke<string>("migrate_old_database"),
+
+  // Proxy
+  fetchWebpage: (url: string) =>
+    invoke<{content: string, status: number, contentType: string}>("fetch_webpage", { url }),
 };

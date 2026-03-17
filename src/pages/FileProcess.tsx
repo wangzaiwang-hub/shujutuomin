@@ -196,6 +196,32 @@ export default function FileProcess() {
               选择输出目录
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  console.log("Manual database initialization...");
+                  await tauriCommands.initializeDatabase();
+                  console.log("Database initialized");
+                  
+                  console.log("Adding test log...");
+                  await addLog("info", "手动测试日志", "这是一条手动添加的测试日志，用于验证数据库存储", undefined, "manual_test");
+                  console.log("Test log added");
+                  
+                  console.log("Getting database info...");
+                  const dbInfo = await tauriCommands.getDatabaseInfo();
+                  console.log("Database info:", dbInfo);
+                  
+                  alert(`数据库测试完成！\n数据库路径: ${dbInfo.database_path}\n数据库存在: ${dbInfo.database_exists}\n日志数量: ${dbInfo.log_count}`);
+                } catch (error) {
+                  console.error("Database test failed:", error);
+                  alert(`数据库测试失败: ${error}`);
+                }
+              }}
+            >
+              数据库测试
+            </Button>
+            <Button
               size="sm"
               onClick={handleStart}
               disabled={pendingCount === 0 || !outputDir || !!activeJobId || selectedRules.length === 0}

@@ -5,15 +5,26 @@ import FileProcess from "@/pages/FileProcess";
 import RuleConfig from "@/pages/RuleConfig";
 import SandboxManager from "@/pages/SandboxManager";
 import OperationLog from "@/pages/OperationLog";
+import CheersAICloud from "@/pages/CheersAICloud";
 import { useLogStore } from "@/store/logStore";
+import { tauriCommands } from "@/lib/tauri";
 
 function App() {
   const { initializeDatabase } = useLogStore();
 
-  // 应用启动时初始化数据库
+  // 应用启动时初始化数据库和迁移旧数据
   useEffect(() => {
     const init = async () => {
       try {
+        // 先尝试迁移旧数据库
+        try {
+          const migrationResult = await tauriCommands.migrateOldDatabase();
+          console.log("Migration result:", migrationResult);
+        } catch (migrationError) {
+          console.log("No migration needed or migration failed:", migrationError);
+        }
+        
+        // 然后初始化数据库
         await initializeDatabase();
         console.log("Database initialized successfully");
       } catch (error) {
@@ -31,6 +42,7 @@ function App() {
           <Route path="/rules" element={<RuleConfig />} />
           <Route path="/sandbox" element={<SandboxManager />} />
           <Route path="/log" element={<OperationLog />} />
+          <Route path="/cloud" element={<CheersAICloud />} />
         </Route>
       </Routes>
     </BrowserRouter>

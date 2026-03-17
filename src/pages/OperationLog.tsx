@@ -53,30 +53,59 @@ export default function OperationLog() {
   // 初始化数据库和加载数据
   useEffect(() => {
     const init = async () => {
-      await initializeDatabase();
-      await loadStatistics();
-      await loadDatabaseInfo();
+      try {
+        console.log("OperationLog: Initializing...");
+        await initializeDatabase();
+        console.log("OperationLog: Database initialized");
+        await loadStatistics();
+        console.log("OperationLog: Statistics loaded");
+        await loadDatabaseInfo();
+        console.log("OperationLog: Database info loaded");
+      } catch (error) {
+        console.error("OperationLog: Initialization failed:", error);
+      }
     };
     init();
-  }, [initializeDatabase]);
+  }, []); // 移除依赖，只在组件挂载时执行一次
 
   // 加载统计信息
   const loadStatistics = async () => {
     try {
+      console.log("Loading statistics...");
       const stats = await tauriCommands.getStatistics();
+      console.log("Statistics loaded:", stats);
       setStatistics(stats);
     } catch (error) {
       console.error("Failed to load statistics:", error);
+      // 设置默认统计信息，避免页面崩溃
+      setStatistics({
+        totalFiles: 0,
+        successfulFiles: 0,
+        failedFiles: 0,
+        totalMaskedItems: 0,
+        averageProcessingTimeMs: 0,
+        recentFiles7days: 0,
+        successRate: 0
+      });
     }
   };
 
   // 加载数据库信息
   const loadDatabaseInfo = async () => {
     try {
+      console.log("Loading database info...");
       const info = await tauriCommands.getDatabaseInfo();
+      console.log("Database info loaded:", info);
       setDbInfo(info);
     } catch (error) {
       console.error("Failed to load database info:", error);
+      // 设置默认数据库信息
+      setDbInfo({
+        status: "error",
+        database_path: "unknown",
+        database_exists: false,
+        log_count: 0
+      });
     }
   };
 
@@ -219,13 +248,13 @@ export default function OperationLog() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">处理时间</CardTitle>
+                  <CardTitle className="text-sm font-medium">平均处理时间</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatDuration(statistics.totalProcessingTimeMs)}</div>
+                  <div className="text-2xl font-bold">{formatDuration(statistics.averageProcessingTimeMs)}</div>
                   <p className="text-xs text-muted-foreground">
-                    总计处理时间
+                    单个文件平均时间
                   </p>
                 </CardContent>
               </Card>

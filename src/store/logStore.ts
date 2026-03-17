@@ -32,19 +32,26 @@ export const useLogStore = create<LogStore>()(
 
       initializeDatabase: async () => {
         try {
+          console.log("Initializing database...");
           await tauriCommands.initializeDatabase();
+          console.log("Database initialized successfully");
           set({ initialized: true });
           // 初始化后加载第一页日志
           await get().loadLogs(1);
+          console.log("Initial logs loaded");
         } catch (error) {
           console.error("Failed to initialize database:", error);
+          // 即使数据库初始化失败，也标记为已初始化，避免重复尝试
+          set({ initialized: true });
         }
       },
 
       addLog: async (level, message, details, filePath, operationType) => {
         try {
+          console.log(`Adding log: ${level} - ${message}`);
           // 添加到数据库
           await tauriCommands.addLogEntry(level, message, details, filePath, operationType);
+          console.log("Log added to database successfully");
           
           // 如果当前在第一页，重新加载以显示新日志
           const { currentPage } = get();
@@ -52,9 +59,9 @@ export const useLogStore = create<LogStore>()(
             await get().loadLogs(1);
           }
         } catch (error) {
-          console.error("Failed to add log:", error);
+          console.error("Failed to add log to database:", error);
           
-          // 如果数据库失败，至少添加到内存中
+          // 如果数据库失败，至少添加到内存中作为备用
           const entry: LogEntry = {
             id: Date.now().toString(),
             timestamp: Date.now(),
@@ -65,6 +72,7 @@ export const useLogStore = create<LogStore>()(
             operationType,
           };
           
+          console.log("Adding log to memory as fallback");
           set((state) => ({
             entries: [entry, ...state.entries].slice(0, state.pageSize),
           }));
@@ -82,20 +90,26 @@ export const useLogStore = create<LogStore>()(
 
       loadLogs: async (page = 1, levelFilter) => {
         if (!get().initialized) {
+          console.log("Database not initialized, initializing now...");
           await get().initializeDatabase();
         }
         
+        console.log(`Loading logs: page=${page}, filter=${levelFilter}`);
         set({ loading: true });
         try {
           const { pageSize } = get();
           const offset = (page - 1) * pageSize;
           
           // 获取总数
+          console.log("Getting total count...");
           const totalCount = await get().getTotalCount(levelFilter);
+          console.log(`Total count: ${totalCount}`);
           const totalPages = Math.ceil(totalCount / pageSize);
           
           // 获取当前页数据
+          console.log(`Getting logs: limit=${pageSize}, offset=${offset}`);
           const logs = await tauriCommands.getLogs(pageSize, offset, levelFilter);
+          console.log(`Retrieved ${logs.length} logs from database`);
           
           // 转换时间戳格式
           const processedLogs = logs.map(log => ({
@@ -107,6 +121,8 @@ export const useLogStore = create<LogStore>()(
             operationType: log.operationType || undefined,
           }));
           
+          console.log(`Processed logs:`, processedLogs);
+          
           set({ 
             entries: processedLogs, 
             loading: false,
@@ -115,8 +131,16 @@ export const useLogStore = create<LogStore>()(
             totalCount
           });
         } catch (error) {
-          console.error("Failed to load logs:", error);
+          console.error("Failed to load logs from database:", error);
           set({ loading: false });
+          
+          // 如果数据库加载失败，显示空状态
+          set({
+            entries: [],
+            currentPage: page,
+            totalPages: 0,
+            totalCount: 0
+          });
         }
       },
 

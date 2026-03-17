@@ -17,12 +17,11 @@ async fn get_database() -> Result<Database, String> {
         *db_guard = Some(db);
     }
     
-    // 克隆数据库实例（Database 应该实现 Clone）
-    // 由于 SqlitePool 实现了 Clone，我们需要修改 Database 结构
+    // 返回数据库实例的克隆
     match db_guard.as_ref() {
-        Some(_) => {
-            // 重新创建连接，因为 SqlitePool 是可以安全克隆的
-            Database::new().await.map_err(|e| format!("Failed to get database: {}", e))
+        Some(db) => {
+            // 由于 SqlitePool 实现了 Clone，我们可以克隆数据库实例
+            Ok(db.clone())
         },
         None => Err("Database not initialized".to_string()),
     }
@@ -185,14 +184,36 @@ pub async fn initialize_database() -> Result<(), String> {
 pub async fn get_database_info() -> Result<serde_json::Value, String> {
     let db = get_database().await?;
     
+    // 获取数据库路径
+    let db_path = crate::core::database::get_database_path()
+        .map_err(|e| format!("Failed to get database path: {}", e))?;
+    
+    // 检查数据库文件是否存在
+    let db_exists = db_path.exists();
+    
     // 获取各表的记录数
-    let log_count = db.get_logs(Some(1), Some(0), None).await
-        .map(|_| "available")
-        .unwrap_or("error");
+    let log_count = match db.get_logs_count(None).await {
+        Ok(count) => count,
+        Err(e) => {
+            eprintln!("Error getting log count: {}", e);
+            -1
+        }
+    };
         
     Ok(serde_json::json!({
         "status": "connected",
-        "log_table": log_count,
+        "database_path": db_path.to_string_lossy(),
+        "database_exists": db_exists,
+        "log_count": log_count,
+        "log_table": if log_count >= 0 { "available" } else { "error" },
         "initialized_at": Utc::now()
     }))
+}
+
+#[tauri::command]
+pub async fn migrate_old_database() -> Result<String, String> {
+    match crate::core::database::migrate_from_old_database().await {
+        Ok(()) => Ok("数据迁移完成".to_string()),
+        Err(e) => Err(format!("数据迁移失败: {}", e)),
+    }
 }

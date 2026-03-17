@@ -163,6 +163,11 @@ pub async fn process_batch_job(job_id: String, options: BatchJobOptions) {
             passphrase: options.passphrase.clone(),
         };
 
+        println!("Starting to process file: {}", file_path);
+        println!("File size: {} bytes", file_size);
+        println!("Output path: {}", output_path);
+        println!("Selected rules: {:?}", options.rule_ids);
+        
         match mask_file(mask_options).await {
             Ok(result) => {
                 let processing_time = file_start_time.elapsed().as_millis() as i64;
@@ -241,7 +246,7 @@ pub async fn process_batch_job(job_id: String, options: BatchJobOptions) {
                         masked_count: 0,
                         processing_time_ms: processing_time,
                         status: "failed".to_string(),
-                        error_message: Some(e.to_string()),
+                        error_message: Some(format!("{}", e)),
                         created_at: chrono::Utc::now(),
                     };
                     let _ = db.add_processing_history(&history).await;

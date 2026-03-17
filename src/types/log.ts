@@ -35,7 +35,7 @@ export interface DatabaseStatistics {
   successfulFiles: number;
   failedFiles: number;
   totalMaskedItems: number;
-  totalProcessingTimeMs: number;
+  averageProcessingTimeMs: number; // 改为平均处理时间
   recentFiles7days: number;
   successRate: number;
 }

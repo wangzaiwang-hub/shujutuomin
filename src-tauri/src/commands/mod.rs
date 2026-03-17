@@ -4,3 +4,4 @@ pub mod sandbox;
 pub mod rules;
 pub mod batch;
 pub mod database;
+pub mod proxy;

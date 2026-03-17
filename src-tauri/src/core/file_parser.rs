@@ -2,6 +2,7 @@ use anyhow::{Result, Context};
 use std::fs;
 use std::io::Read;
 
+#[derive(Debug)]
 pub enum FileFormat {
     Csv,
     Excel,
