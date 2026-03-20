@@ -5,3 +5,4 @@ pub mod file_parser;
 pub mod rules;
 pub mod batch;
 pub mod database;
+pub mod ner;

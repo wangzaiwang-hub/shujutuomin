@@ -63,19 +63,21 @@ static BUILTIN_RULES: Lazy<Vec<MaskingRule>> = Lazy::new(|| {
             builtin: true,
         },
         MaskingRule {
-            id: "chinese_name".to_string(),
-            name: "中文姓名".to_string(),
-            pattern: r"(?:[\u4e00-\u9fa5]{1})[·•]?[\u4e00-\u9fa5]{1,3}".to_string(),
-            replacement_template: "***NAME***".to_string(),
-            enabled: false,
-            builtin: true,
-        },
-        MaskingRule {
             id: "passport".to_string(),
             name: "护照号".to_string(),
             pattern: r"\b[A-Za-z][0-9]{8}\b".to_string(),
             replacement_template: "***PASSPORT***".to_string(),
             enabled: true,
+            builtin: true,
+        },
+        // 中文姓名规则放在最后，避免过度匹配
+        // 注意：这个规则会匹配所有2-4个汉字，所以要最后执行
+        MaskingRule {
+            id: "chinese_name".to_string(),
+            name: "中文姓名".to_string(),
+            pattern: r"[\u4e00-\u9fa5]{2,4}".to_string(),
+            replacement_template: "姓名".to_string(),
+            enabled: false,  // 默认禁用，避免误报
             builtin: true,
         },
     ]

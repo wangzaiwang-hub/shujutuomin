@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::core::{file_parser, masking_engine, crypto};
+use crate::core::{masking_engine, file_parser, ner, crypto};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MaskFileOptions {
@@ -28,6 +28,7 @@ pub struct PreviewResult {
     pub original_rows: Vec<Vec<String>>,
     pub masked_rows: Vec<Vec<String>>,
     pub headers: Vec<String>,
+    pub detected_entities: Option<Vec<ner::RowEntities>>,
 }
 
 #[tauri::command]
@@ -206,6 +207,9 @@ pub async fn preview_masking(options: PreviewOptions) -> Result<PreviewResult, S
         .filter(|r| options.rule_ids.contains(&r.id))
         .cloned()
         .collect();
+    
+    // Create NER detector
+    let ner_detector = ner::NERDetector::new();
 
     match format {
         file_parser::FileFormat::Csv => {
@@ -225,12 +229,195 @@ pub async fn preview_masking(options: PreviewOptions) -> Result<PreviewResult, S
                 })
                 .collect();
 
+            // Detect entities in original rows
+            let detected_entities = Some(ner_detector.detect_in_rows(&preview_rows));
+
             Ok(PreviewResult {
                 original_rows: preview_rows,
                 masked_rows,
                 headers,
+                detected_entities,
             })
         }
-        _ => Err("Preview only supports CSV files currently".to_string()),
+        file_parser::FileFormat::Excel => {
+            let (headers, rows) = file_parser::parse_excel(&options.file_path)
+                .map_err(|e| format!("Failed to parse Excel: {}", e))?;
+
+            let preview_rows: Vec<_> = rows.into_iter().take(max_rows).collect();
+            let mut mapping = std::collections::HashMap::new();
+            let mut counter = 0usize;
+
+            let masked_rows: Vec<Vec<String>> = preview_rows
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|cell| masking_engine::mask_value(cell, &active_rules, &mut mapping, &mut counter))
+                        .collect()
+                })
+                .collect();
+
+            // Detect entities in original rows
+            let detected_entities = Some(ner_detector.detect_in_rows(&preview_rows));
+
+            Ok(PreviewResult {
+                original_rows: preview_rows,
+                masked_rows,
+                headers,
+                detected_entities,
+            })
+        }
+        file_parser::FileFormat::Word => {
+            // 读取 Word 文档内容
+            let content = file_parser::parse_word(&options.file_path)
+                .map_err(|e| format!("Failed to parse Word: {}", e))?;
+            
+            // 按行分割
+            let lines: Vec<String> = content.lines()
+                .map(|s| s.to_string())
+                .collect();
+            
+            let mut mapping = std::collections::HashMap::new();
+            let mut counter = 0usize;
+            
+            // 对每行进行脱敏
+            let masked_lines: Vec<String> = lines
+                .iter()
+                .map(|line| masking_engine::mask_value(line, &active_rules, &mut mapping, &mut counter))
+                .collect();
+            
+            // 将文本行转换为表格格式（单列）
+            let original_rows: Vec<Vec<String>> = lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            let masked_rows: Vec<Vec<String>> = masked_lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            // Detect entities in original rows
+            let detected_entities = Some(ner_detector.detect_in_rows(&original_rows));
+            
+            Ok(PreviewResult {
+                original_rows,
+                masked_rows,
+                headers: vec!["内容".to_string()],
+                detected_entities,
+            })
+        }
+        file_parser::FileFormat::PowerPoint => {
+            // 读取 PowerPoint 内容
+            let content = file_parser::parse_powerpoint(&options.file_path)
+                .map_err(|e| format!("Failed to parse PowerPoint: {}", e))?;
+            
+            // 按行分割
+            let lines: Vec<String> = content.lines()
+                .map(|s| s.to_string())
+                .collect();
+            
+            let mut mapping = std::collections::HashMap::new();
+            let mut counter = 0usize;
+            
+            // 对每行进行脱敏
+            let masked_lines: Vec<String> = lines
+                .iter()
+                .map(|line| masking_engine::mask_value(line, &active_rules, &mut mapping, &mut counter))
+                .collect();
+            
+            // 将文本行转换为表格格式（单列）
+            let original_rows: Vec<Vec<String>> = lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            let masked_rows: Vec<Vec<String>> = masked_lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            // Detect entities in original rows
+            let detected_entities = Some(ner_detector.detect_in_rows(&original_rows));
+            
+            Ok(PreviewResult {
+                original_rows,
+                masked_rows,
+                headers: vec!["内容".to_string()],
+                detected_entities,
+            })
+        }
+        file_parser::FileFormat::Pdf => {
+            // 读取 PDF 内容
+            let content = file_parser::parse_pdf(&options.file_path)
+                .map_err(|e| format!("Failed to parse PDF: {}", e))?;
+            
+            // 按行分割
+            let lines: Vec<String> = content.lines()
+                .map(|s| s.to_string())
+                .collect();
+            
+            let mut mapping = std::collections::HashMap::new();
+            let mut counter = 0usize;
+            
+            // 对每行进行脱敏
+            let masked_lines: Vec<String> = lines
+                .iter()
+                .map(|line| masking_engine::mask_value(line, &active_rules, &mut mapping, &mut counter))
+                .collect();
+            
+            // 将文本行转换为表格格式（单列）
+            let original_rows: Vec<Vec<String>> = lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            let masked_rows: Vec<Vec<String>> = masked_lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            // Detect entities in original rows
+            let detected_entities = Some(ner_detector.detect_in_rows(&original_rows));
+            
+            Ok(PreviewResult {
+                original_rows,
+                masked_rows,
+                headers: vec!["内容".to_string()],
+                detected_entities,
+            })
+        }
+        file_parser::FileFormat::Markdown | file_parser::FileFormat::Text => {
+            // 读取文本内容
+            let content = std::fs::read_to_string(&options.file_path)
+                .map_err(|e| format!("Failed to read file: {}", e))?;
+            
+            // 按行分割（读取全部内容，不限制行数）
+            let lines: Vec<String> = content.lines()
+                .map(|s| s.to_string())
+                .collect();
+            
+            let mut mapping = std::collections::HashMap::new();
+            let mut counter = 0usize;
+            
+            // 对每行进行脱敏
+            let masked_lines: Vec<String> = lines
+                .iter()
+                .map(|line| masking_engine::mask_value(line, &active_rules, &mut mapping, &mut counter))
+                .collect();
+            
+            // 将文本行转换为表格格式（单列）
+            let original_rows: Vec<Vec<String>> = lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            let masked_rows: Vec<Vec<String>> = masked_lines.iter()
+                .map(|line| vec![line.clone()])
+                .collect();
+            
+            // Detect entities in original rows
+            let detected_entities = Some(ner_detector.detect_in_rows(&original_rows));
+            
+            Ok(PreviewResult {
+                original_rows,
+                masked_rows,
+                headers: vec!["内容".to_string()],
+                detected_entities,
+            })
+        }
+        _ => Err("预览功能目前支持 CSV、Excel、Word、PowerPoint、PDF、Markdown 和 TXT 文件".to_string()),
     }
 }

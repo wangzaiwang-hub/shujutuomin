@@ -5,7 +5,7 @@ import FileProcess from "@/pages/FileProcess";
 import RuleConfig from "@/pages/RuleConfig";
 import SandboxManager from "@/pages/SandboxManager";
 import OperationLog from "@/pages/OperationLog";
-import CheersAICloud from "@/pages/CheersAICloud";
+import CheersAICloudBrowser from "@/pages/CheersAICloudBrowser";
 import { useLogStore } from "@/store/logStore";
 import { tauriCommands } from "@/lib/tauri";
 
@@ -42,7 +42,7 @@ function App() {
           <Route path="/rules" element={<RuleConfig />} />
           <Route path="/sandbox" element={<SandboxManager />} />
           <Route path="/log" element={<OperationLog />} />
-          <Route path="/cloud" element={<CheersAICloud />} />
+          <Route path="/cloud" element={<CheersAICloudBrowser />} />
         </Route>
       </Routes>
     </BrowserRouter>

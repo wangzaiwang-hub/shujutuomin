@@ -5,3 +5,4 @@ pub mod rules;
 pub mod batch;
 pub mod database;
 pub mod proxy;
+pub mod webview;

@@ -4,6 +4,7 @@ import { FileQueueItem } from "@/components/file/FileQueueItem";
 import { BatchProgress } from "@/components/file/BatchProgress";
 import { RuleSelector } from "@/components/file/RuleSelector";
 import { PassphraseBox } from "@/components/common/PassphraseBox";
+import { MaskingPreviewDialog } from "@/components/file/MaskingPreviewDialog";
 import { Button } from "@/components/ui/button";
 import { useFileStore } from "@/store/fileStore";
 import { useLogStore } from "@/store/logStore";
@@ -14,7 +15,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { tauriCommands } from "@/lib/tauri";
 import { useEffect, useState } from "react";
 import { getDisplayPath, validatePath, getDefaultDocumentsPath } from "@/lib/path";
-import type { BatchStatus } from "@/types/commands";
+import type { BatchStatus, PreviewResult } from "@/types/commands";
 
 export default function FileProcess() {
   const { 
@@ -35,6 +36,8 @@ export default function FileProcess() {
 
   const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
   const [selectedRules, setSelectedRules] = useState<string[]>([]);
+  const [previewData, setPreviewData] = useState<Array<{ fileName: string; preview: PreviewResult }>>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   // 轮询批处理状态
   useEffect(() => {
@@ -65,7 +68,7 @@ export default function FileProcess() {
         // 如果任务完成，停止轮询
         if (status.status === "Completed" || status.status === "Failed" || status.status === "Cancelled") {
           setActiveJob(null);
-          setTimeout(() => setBatchStatus(null), 3000); // 3秒后清除状态显示
+          setTimeout(() => setBatchStatus(null), 3000);
         }
       } catch (error) {
         console.error("Failed to get batch status:", error);
@@ -148,6 +151,33 @@ export default function FileProcess() {
       return;
     }
 
+    // 加载所有待处理文件的预览数据
+    const pendingFiles = files.filter(f => f.status === "pending");
+    if (pendingFiles.length === 0) return;
+
+    try {
+      const previews = await Promise.all(
+        pendingFiles.map(async (file) => {
+          const preview = await tauriCommands.previewMasking({
+            file_path: file.path,
+            rule_ids: selectedRules,
+            // 不限制行数，加载完整文件
+          });
+          return {
+            fileName: file.name,
+            preview,
+          };
+        })
+      );
+      setPreviewData(previews);
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Failed to load preview:", error);
+      alert(`加载预览失败: ${error}`);
+    }
+  };
+
+  const executeActualMasking = async () => {
     // 记录开始处理日志
     await addLog("info", `开始批处理 ${pendingCount} 个文件`, `输出目录: ${outputDir}`, undefined, "batch_start");
 
@@ -175,6 +205,20 @@ export default function FileProcess() {
   };
 
   const pendingCount = files.filter((f) => f.status === "pending").length;
+
+  const handlePreviewConfirm = async () => {
+    setShowPreview(false);
+    setPreviewData([]);
+    // 执行实际的脱敏操作
+    await executeActualMasking();
+  };
+
+  const handlePreviewCancel = () => {
+    setShowPreview(false);
+    setPreviewData([]);
+    // 可以选择清除已完成的文件
+    clearCompleted();
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -284,6 +328,15 @@ export default function FileProcess() {
           </div>
         </div>
       </div>
+
+      {/* 脱敏预览对话框 */}
+      <MaskingPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        previews={previewData}
+        onConfirm={handlePreviewConfirm}
+        onCancel={handlePreviewCancel}
+      />
     </div>
   );
 }

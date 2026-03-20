@@ -35,6 +35,9 @@
       "icons/icon.png",
       "icons/icon.ico"
     ],
+    "resources": [
+      "scripts/*"
+    ],
     "publisher": "CheersAI Team",
     "copyright": "Copyright © 2024 CheersAI Team. All rights reserved.",
     "category": "Utility",

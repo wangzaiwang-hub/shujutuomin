@@ -62,7 +62,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {navItems.map(({ to, icon: Icon, label, description }) => (
           <Tooltip key={to} delayDuration={0}>
             <TooltipTrigger asChild>
@@ -71,70 +71,22 @@ export function Sidebar() {
                 end={to === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "group flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 relative",
-                    "hover:bg-slate-800/50 hover:text-white hover:shadow-lg hover:shadow-blue-500/10",
-                    "active:scale-95",
-                    // CheersAI 云端项使用绿色主题
-                    to === "/cloud" ? (
-                      isActive
-                        ? "bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/25 border border-green-400/20"
-                        : "text-slate-300 hover:text-white border border-transparent hover:bg-gradient-to-r hover:from-green-600/20 hover:to-green-500/20 hover:shadow-green-500/10"
-                    ) : (
-                      isActive
-                        ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25 border border-blue-400/20"
-                        : "text-slate-300 hover:text-white border border-transparent"
-                    )
+                    "group flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-normal transition-all duration-200",
+                    isActive
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-700/70"
                   )
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    {/* 活跃状态的左侧指示器 */}
-                    {isActive && (
-                      <div className={cn(
-                        "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full",
-                        to === "/cloud" ? "bg-green-100" : "bg-white"
-                      )} />
-                    )}
-                    
-                    {/* 图标容器 */}
-                    <div className={cn(
-                      "flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-200",
-                      isActive 
-                        ? "bg-white/20 text-white" 
-                        : "text-slate-400 group-hover:text-white group-hover:bg-white/10"
-                    )}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    
-                    {/* 文字标签 */}
-                    {!sidebarCollapsed && (
-                      <div className="flex flex-col">
-                        <span className="font-medium tracking-wide">{label}</span>
-                        {description && (
-                          <span className={cn(
-                            "text-xs transition-colors duration-200",
-                            isActive 
-                              ? (to === "/cloud" ? "text-green-100" : "text-blue-100")
-                              : "text-slate-500 group-hover:text-slate-300"
-                          )}>
-                            {description}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* 悬停时的右侧指示器 */}
-                    {!sidebarCollapsed && !isActive && (
-                      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <div className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          to === "/cloud" ? "bg-green-400 animate-pulse" : "bg-slate-400"
-                        )} />
-                      </div>
-                    )}
-                  </>
-                )}
+                <>
+                  {/* 图标 */}
+                  <Icon className="w-5 h-5 shrink-0" />
+                  
+                  {/* 文字标签 */}
+                  {!sidebarCollapsed && (
+                    <span>{label}</span>
+                  )}
+                </>
               </NavLink>
             </TooltipTrigger>
             {sidebarCollapsed && (

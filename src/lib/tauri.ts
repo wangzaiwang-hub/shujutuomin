@@ -143,4 +143,26 @@ export const tauriCommands = {
   // Proxy
   fetchWebpage: (url: string) =>
     invoke<{content: string, status: number, contentType: string}>("fetch_webpage", { url }),
+
+  // WebView
+  openWebviewWindow: (options: { url: string; title?: string; width?: number; height?: number }) =>
+    invoke<string>("open_webview_window", { options }),
+
+  navigateWebview: (label: string, url: string) =>
+    invoke<void>("navigate_webview", { label, url }),
+
+  webviewReload: (label: string) =>
+    invoke<void>("webview_reload", { label }),
+
+  closeWebviewWindow: (label: string) =>
+    invoke<void>("close_webview_window", { label }),
+
+  getWebviewUrl: (label: string) =>
+    invoke<string>("get_webview_url", { label }),
+
+  webviewEvalScript: (label: string, script: string) =>
+    invoke<void>("webview_eval_script", { label, script }),
+
+  navigateMainWindowWithButton: (url: string, returnUrl: string) =>
+    invoke<void>("navigate_main_window_with_button", { url, returnUrl }),
 };

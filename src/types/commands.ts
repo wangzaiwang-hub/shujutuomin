@@ -18,10 +18,23 @@ export interface PreviewOptions {
   max_rows?: number;
 }
 
+export interface EntityMatch {
+  text: string;
+  entity_type: string;
+  start: number;
+  end: number;
+}
+
+export interface RowEntities {
+  row_index: number;
+  entities: EntityMatch[];
+}
+
 export interface PreviewResult {
   original_rows: string[][];
   masked_rows: string[][];
   headers: string[];
+  detected_entities?: RowEntities[];
 }
 
 // Crypto commands

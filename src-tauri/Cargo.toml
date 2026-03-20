@@ -45,6 +45,7 @@ sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "chrono"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.11", features = ["json"] }
 url = "2.4"
+pdf-extract = "0.7"
 
 [profile.release]
 opt-level = "z"

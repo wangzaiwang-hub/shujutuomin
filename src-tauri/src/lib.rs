@@ -1,7 +1,7 @@
 mod commands;
 mod core;
 
-use commands::{masking, crypto, sandbox, rules, batch, database, proxy};
+use commands::{masking, crypto, sandbox, rules, batch, database, proxy, webview};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -73,6 +73,13 @@ pub fn run() {
             database::get_database_info,
             database::migrate_old_database,
             proxy::fetch_webpage,
+            webview::open_webview_window,
+            webview::navigate_webview,
+            webview::webview_reload,
+            webview::close_webview_window,
+            webview::get_webview_url,
+            webview::webview_eval_script,
+            webview::navigate_main_window_with_button,
         ])
         .setup(|_app| {
             println!("=== Tauri Setup Complete ===");
