@@ -6,6 +6,8 @@ import RuleConfig from "@/pages/RuleConfig";
 import SandboxManager from "@/pages/SandboxManager";
 import OperationLog from "@/pages/OperationLog";
 import CheersAICloudBrowser from "@/pages/CheersAICloudBrowser";
+import { FileManager } from "@/components/file/FileManager";
+import { GiteaSettings } from "@/components/settings/GiteaSettings";
 import { useLogStore } from "@/store/logStore";
 import { tauriCommands } from "@/lib/tauri";
 
@@ -39,6 +41,8 @@ function App() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<FileProcess />} />
+          <Route path="/files" element={<FileManager />} />
+          <Route path="/gitea" element={<GiteaSettings />} />
           <Route path="/rules" element={<RuleConfig />} />
           <Route path="/sandbox" element={<SandboxManager />} />
           <Route path="/log" element={<OperationLog />} />

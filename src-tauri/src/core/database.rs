@@ -39,7 +39,7 @@ pub struct ProcessingHistory {
 
 #[derive(Clone)]
 pub struct Database {
-    pool: SqlitePool,
+    pub(crate) pool: SqlitePool,
 }
 
 impl Database {
@@ -124,6 +124,27 @@ impl Database {
         .execute(&self.pool)
         .await?;
         
+        // 文件管理表
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS managed_files (
+                id TEXT PRIMARY KEY,
+                original_name TEXT NOT NULL,
+                masked_name TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                file_type TEXT NOT NULL,
+                masked_count INTEGER NOT NULL,
+                gitea_uploaded BOOLEAN DEFAULT 0,
+                gitea_url TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+        
         // 创建索引
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)")
             .execute(&self.pool)
@@ -134,6 +155,10 @@ impl Database {
             .await?;
             
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_processing_history_created_at ON processing_history(created_at)")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_managed_files_created_at ON managed_files(created_at)")
             .execute(&self.pool)
             .await?;
         

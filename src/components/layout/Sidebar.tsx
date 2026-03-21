@@ -8,13 +8,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Cloud,
+  FolderOpen,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/appStore";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
-  { to: "/", icon: FileText, label: "文件处理" },
+  { to: "/", icon: FileText, label: "文件脱敏", description: "处理和脱敏文件" },
+  { to: "/files", icon: FolderOpen, label: "文件管理", description: "管理脱敏后的文件" },
+  { to: "/gitea", icon: Upload, label: "Gitea 设置", description: "配置 Gitea 上传" },
   { to: "/rules", icon: Settings2, label: "规则配置" },
   { to: "/sandbox", icon: Lock, label: "沙箱管理" },
   { to: "/log", icon: ClipboardList, label: "操作日志" },

@@ -1,7 +1,7 @@
 mod commands;
 mod core;
 
-use commands::{masking, crypto, sandbox, rules, batch, database, proxy, webview};
+use commands::{masking, crypto, sandbox, rules, batch, database, proxy, webview, gitea, file_manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -40,6 +40,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .manage(gitea::GiteaState::default())
         .invoke_handler(tauri::generate_handler![
             masking::mask_file,
             masking::preview_masking,
@@ -80,6 +81,26 @@ pub fn run() {
             webview::get_webview_url,
             webview::webview_eval_script,
             webview::navigate_main_window_with_button,
+            gitea::get_gitea_status,
+            gitea::update_gitea_config,
+            gitea::test_gitea_connection,
+            gitea::create_gitea_repo,
+            gitea::upload_to_gitea,
+            gitea::upload_batch_to_gitea,
+            file_manager::add_managed_file,
+            file_manager::get_managed_files,
+            file_manager::get_managed_file,
+            file_manager::update_managed_file,
+            file_manager::delete_managed_file,
+            file_manager::delete_managed_files,
+            file_manager::mark_file_uploaded,
+            file_manager::search_managed_files,
+            file_manager::get_file_statistics,
+            sandbox::delete_sandbox_file,
+            sandbox::delete_sandbox_files,
+            sandbox::get_sandbox_dir_path,
+            sandbox::open_sandbox_dir,
+            sandbox::clear_sandbox_dir,
         ])
         .setup(|_app| {
             println!("=== Tauri Setup Complete ===");

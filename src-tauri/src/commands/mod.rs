@@ -6,3 +6,5 @@ pub mod batch;
 pub mod database;
 pub mod proxy;
 pub mod webview;
+pub mod gitea;
+pub mod file_manager;
