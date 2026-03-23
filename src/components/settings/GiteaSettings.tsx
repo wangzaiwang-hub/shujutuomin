@@ -120,9 +120,9 @@ export function GiteaSettings() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Gitea 配置</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">FileBay 配置</h2>
         <p className="text-gray-600">
-          配置 Gitea 服务器信息，将脱敏后的文件自动上传到 Gitea 仓库进行版本管理
+          配置 FileBay 服务器信息，将脱敏后的文件自动上传到 FileBay 仓库进行版本管理
         </p>
       </div>
 
@@ -165,8 +165,8 @@ export function GiteaSettings() {
         {/* 启用开关 */}
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div>
-            <label className="font-medium text-gray-900">启用 Gitea 上传</label>
-            <p className="text-sm text-gray-500">脱敏完成后可选择上传到 Gitea</p>
+            <label className="font-medium text-gray-900">启用 FileBay 上传</label>
+            <p className="text-sm text-gray-500">脱敏完成后可选择上传到 FileBay</p>
           </div>
           <button
             type="button"
@@ -186,17 +186,17 @@ export function GiteaSettings() {
         {/* Gitea URL */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Gitea 服务器地址
+            FileBay 服务器地址
           </label>
           <input
             type="url"
             value={config.url}
             onChange={(e) => setConfig({ ...config, url: e.target.value })}
-            placeholder="https://gitea.example.com"
+            placeholder="https://filebay.example.com"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="mt-1 text-xs text-gray-500">
-            例如: http://localhost:3001 或 https://gitea.example.com
+            例如: http://localhost:3001 或 https://filebay.example.com
           </p>
         </div>
 
@@ -210,7 +210,7 @@ export function GiteaSettings() {
               type="password"
               value={config.token}
               onChange={(e) => setConfig({ ...config, token: e.target.value })}
-              placeholder={status?.config.has_token ? "••••••••（已保存，如需修改请重新输入）" : "输入您的 Gitea Access Token"}
+              placeholder={status?.config.has_token ? "••••••••（已保存，如需修改请重新输入）" : "输入您的 FileBay Access Token"}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {status?.config.has_token && !config.token && (
@@ -220,7 +220,7 @@ export function GiteaSettings() {
             )}
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            在 Gitea 设置 → 应用 → 管理访问令牌 中生成。出于安全考虑，已保存的 Token 不会显示。
+            在 FileBay 设置 → 应用 → 管理访问令牌 中生成。出于安全考虑，已保存的 Token 不会显示。
           </p>
         </div>
 
@@ -297,9 +297,9 @@ export function GiteaSettings() {
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">💡 配置说明</h3>
           <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li><strong>Gitea 服务器地址</strong>：完整的 Gitea 服务器 URL（例如：http://localhost:3000）</li>
-            <li><strong>访问令牌</strong>：在 Gitea 设置 → 应用 → 管理访问令牌 中生成（需要 repo 权限）</li>
-            <li><strong>用户名</strong>：你的 Gitea 用户名（不是邮箱）</li>
+            <li><strong>FileBay 服务器地址</strong>：完整的 FileBay 服务器 URL（例如：http://localhost:3000）</li>
+            <li><strong>访问令牌</strong>：在 FileBay 设置 → 应用 → 管理访问令牌 中生成（需要 repo 权限）</li>
+            <li><strong>用户名</strong>：你的 FileBay 用户名（不是邮箱）</li>
             <li><strong>仓库名称</strong>：用于存储脱敏文件的仓库名（如：masked-files）</li>
           </ul>
         </div>
@@ -309,7 +309,7 @@ export function GiteaSettings() {
           <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
             <li><strong>认证失败</strong>：请检查 Token 是否正确，是否有 repo 权限</li>
             <li><strong>URL 错误</strong>：确保 URL 格式正确，不要包含 /api 路径</li>
-            <li><strong>用户名错误</strong>：使用 Gitea 用户名，不是显示名称</li>
+            <li><strong>用户名错误</strong>：使用 FileBay 用户名，不是显示名称</li>
             <li><strong>仓库已存在</strong>：如果仓库已存在，无需重复创建</li>
           </ul>
         </div>
@@ -317,7 +317,7 @@ export function GiteaSettings() {
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
           <h3 className="font-medium text-green-900 mb-2">✅ 配置步骤</h3>
           <ol className="text-sm text-green-800 space-y-1 list-decimal list-inside">
-            <li>登录你的 Gitea 服务器</li>
+            <li>登录你的 FileBay 服务器</li>
             <li>进入 设置 → 应用 → 管理访问令牌</li>
             <li>点击"生成新令牌"，选择 repo 权限</li>
             <li>复制生成的 Token 并填写到上方表单</li>
@@ -330,12 +330,12 @@ export function GiteaSettings() {
           <h3 className="font-medium text-gray-900 mb-2">📝 配置示例</h3>
           <div className="text-sm text-gray-700 space-y-2 font-mono">
             <div><strong>URL:</strong> http://localhost:8080 或 http://localhost:3000</div>
-            <div><strong>Token:</strong> 从 Gitea 设置中生成的令牌</div>
-            <div><strong>用户名:</strong> 你的 Gitea 用户名</div>
+            <div><strong>Token:</strong> 从 FileBay 设置中生成的令牌</div>
+            <div><strong>用户名:</strong> 你的 FileBay 用户名</div>
             <div><strong>仓库:</strong> masked-files</div>
           </div>
           <div className="mt-3 text-xs text-gray-600">
-            💡 提示：URL 端口取决于你的 Gitea 配置，常见端口有 3000、3001、8080
+            💡 提示：URL 端口取决于你的 FileBay 配置，常见端口有 3000、3001、8080
           </div>
         </div>
       </div>

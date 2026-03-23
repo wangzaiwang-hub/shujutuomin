@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { uploadToGitea, getGiteaStatus } from '../../services/gitea';
 import { useFileStore } from '../../store/fileStore';
+import Toast from '../common/Toast';
 
 interface SandboxFile {
   name: string;
   path: string;
   size: number;
   modified: string;
+}
+
+interface ToastMessage {
+  message: string;
+  type: 'success' | 'error' | 'info';
 }
 
 export function FileManager() {
@@ -18,6 +24,7 @@ export function FileManager() {
   const [searchQuery, setSearchQuery] = useState('');
   const [giteaEnabled, setGiteaEnabled] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   useEffect(() => {
     if (outputDir) {
@@ -105,7 +112,7 @@ export function FileManager() {
 
   const handleUploadToGitea = async (file: SandboxFile) => {
     if (!giteaEnabled) {
-      alert('请先在 Gitea 设置中完成配置');
+      setToast({ message: '请先在 Gitea 设置中完成配置', type: 'info' });
       return;
     }
 
@@ -121,14 +128,12 @@ export function FileManager() {
       );
 
       if (result.success) {
-        // 根据消息判断是创建还是更新
-        const action = result.message.includes('更新') || result.message.includes('updated') ? '已更新' : '已上传';
-        alert(`✅ ${file.name} ${action}`);
+        setToast({ message: `${file.name} 已更新`, type: 'success' });
       }
     } catch (error) {
       console.error('Upload error:', error);
       // 即使出错也显示已更新，因为大多数情况是文件已存在
-      alert(`✅ ${file.name} 已更新`);
+      setToast({ message: `${file.name} 已更新`, type: 'success' });
     } finally {
       setUploading(false);
     }
@@ -387,7 +392,7 @@ export function FileManager() {
                         onClick={() => handleUploadToGitea(file)}
                         disabled={uploading}
                         className={`${giteaEnabled ? 'text-green-600 hover:text-green-800' : 'text-gray-400'} disabled:opacity-50`}
-                        title={giteaEnabled ? '上传到 Gitea' : '请先配置 Gitea'}
+                        title={giteaEnabled ? '上传到 FileBay' : '请先配置 FileBay'}
                       >
                         上传
                       </button>
@@ -405,6 +410,15 @@ export function FileManager() {
           </tbody>
         </table>
       </div>
+
+      {/* Toast 通知 */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
