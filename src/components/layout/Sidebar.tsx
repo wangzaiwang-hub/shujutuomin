@@ -9,19 +9,21 @@ import {
   Cloud,
   FolderOpen,
   Upload,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/appStore";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
-  { to: "/", icon: FileText, label: "文件脱敏", description: "处理和脱敏文件" },
+  { to: "/cloud", icon: Cloud, label: "CheersAI", description: "访问云端AI服务" },
+  { to: "/process", icon: FileText, label: "文件脱敏", description: "处理和脱敏文件" },
+  { to: "/unmask", icon: RotateCcw, label: "文件反脱敏", description: "还原已脱敏的文件" },
   { to: "/files", icon: FolderOpen, label: "文件管理", description: "管理脱敏后的文件" },
   { to: "/gitea", icon: Upload, label: "FileBay 设置", description: "配置 FileBay 上传" },
   { to: "/rules", icon: Settings2, label: "规则配置" },
   { to: "/sandbox", icon: Lock, label: "沙箱管理" },
   { to: "/log", icon: ClipboardList, label: "操作日志" },
-  { to: "/cloud", icon: Cloud, label: "CheersAI", description: "访问云端AI服务" },
 ];
 
 
@@ -33,12 +35,16 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-[#1a1f2e] text-white transition-all duration-200 shrink-0",
-        sidebarCollapsed ? "w-16" : "w-56"
+        "flex flex-col h-full text-white transition-all shrink-0",
+        sidebarCollapsed ? "w-16" : "w-64"
       )}
+      style={{
+        background: 'linear-gradient(180deg, #111827 0%, #1f2937 100%)',
+        transitionDuration: '200ms'
+      }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4">
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10">
         <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shrink-0" />
         {!sidebarCollapsed && (
           <span className="text-base font-medium text-white">CheersAI Vault</span>
@@ -46,25 +52,23 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 overflow-y-auto">
         {navItems.map(({ to, icon: Icon, label, description }) => {
-          const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+          const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
           return (
           <Tooltip key={to} delayDuration={0}>
             <TooltipTrigger asChild>
               <NavLink
                 to={to}
-                style={isActive ? {
-                  backgroundColor: '#4285f4',
-                  color: 'white',
-                  borderRadius: '12px',
-                } : {}}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 mb-1 text-sm transition-all duration-150",
+                  "flex items-center gap-3 h-12 px-4 mb-1 text-sm rounded-lg transition-all",
                   isActive
-                    ? "font-medium"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-[#3b82f6] text-white font-medium"
+                    : "text-[#d1d5db] hover:bg-white/5"
                 )}
+                style={{
+                  transitionDuration: '200ms'
+                }}
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 {!sidebarCollapsed && (

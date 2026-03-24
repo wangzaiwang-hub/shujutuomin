@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { listen } from '@tauri-apps/api/event';
 import { MainLayout } from "@/components/layout/MainLayout";
 import FileProcess from "@/pages/FileProcess";
+import FileUnmask from "@/pages/FileUnmask";
 import RuleConfig from "@/pages/RuleConfig";
 import SandboxManager from "@/pages/SandboxManager";
 import OperationLog from "@/pages/OperationLog";
@@ -11,8 +13,9 @@ import { GiteaSettings } from "@/components/settings/GiteaSettings";
 import { useLogStore } from "@/store/logStore";
 import { tauriCommands } from "@/lib/tauri";
 
-function App() {
+function AppRoutes() {
   const { initializeDatabase } = useLogStore();
+  const navigate = useNavigate();
 
   // 应用启动时初始化数据库和迁移旧数据
   useEffect(() => {
@@ -36,19 +39,51 @@ function App() {
     init();
   }, [initializeDatabase]);
 
+  // 监听导航事件
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    
+    const setupListener = async () => {
+      try {
+        unlisten = await listen('navigate-to-process', () => {
+          console.log('Received navigate-to-process event');
+          navigate('/process');
+        });
+      } catch (error) {
+        console.error('Failed to setup event listener:', error);
+      }
+    };
+    
+    setupListener();
+    
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [navigate]);
+
+  return (
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route index element={<Navigate to="/cloud" replace />} />
+        <Route path="/process" element={<FileProcess />} />
+        <Route path="/unmask" element={<FileUnmask />} />
+        <Route path="/files" element={<FileManager />} />
+        <Route path="/gitea" element={<GiteaSettings />} />
+        <Route path="/rules" element={<RuleConfig />} />
+        <Route path="/sandbox" element={<SandboxManager />} />
+        <Route path="/log" element={<OperationLog />} />
+        <Route path="/cloud" element={<CheersAICloudBrowser />} />
+      </Route>
+    </Routes>
+  );
+}
+
+function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<MainLayout />}>
-          <Route index element={<FileProcess />} />
-          <Route path="/files" element={<FileManager />} />
-          <Route path="/gitea" element={<GiteaSettings />} />
-          <Route path="/rules" element={<RuleConfig />} />
-          <Route path="/sandbox" element={<SandboxManager />} />
-          <Route path="/log" element={<OperationLog />} />
-          <Route path="/cloud" element={<CheersAICloudBrowser />} />
-        </Route>
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

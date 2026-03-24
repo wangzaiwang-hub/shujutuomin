@@ -31,6 +31,15 @@ export const tauriCommands = {
   decryptMapping: (options: DecryptOptions) =>
     invoke<string>("decrypt_mapping", { options }),
 
+  // Unmask
+  unmaskFile: (options: {
+    masked_file_path: string;
+    mapping_file_path: string;
+    passphrase: string;
+    output_path: string;
+  }) =>
+    invoke<{ output_path: string; restored_count: number }>("unmask_file", { options }),
+
   // Sandbox
   verifyPin: (pin: string) =>
     invoke<boolean>("verify_pin", { pin }),

@@ -7,6 +7,7 @@ interface FileStore {
   activeJobId: string | null;
   passphrase: string;
   outputDir: string;
+  rememberPassphrase: boolean;
   addFiles: (files: QueuedFile[]) => void;
   removeFile: (id: string) => void;
   updateFile: (id: string, updates: Partial<QueuedFile>) => void;
@@ -14,6 +15,7 @@ interface FileStore {
   setActiveJob: (id: string | null) => void;
   setPassphrase: (p: string) => void;
   setOutputDir: (dir: string) => void;
+  setRememberPassphrase: (remember: boolean) => void;
 }
 
 export const useFileStore = create<FileStore>()(
@@ -23,6 +25,7 @@ export const useFileStore = create<FileStore>()(
       activeJobId: null,
       passphrase: "",
       outputDir: "",
+      rememberPassphrase: true,
 
       addFiles: (newFiles) =>
         set((state) => ({
@@ -50,13 +53,20 @@ export const useFileStore = create<FileStore>()(
       setActiveJob: (id) => set({ activeJobId: id }),
       setPassphrase: (p) => set({ passphrase: p }),
       setOutputDir: (dir) => set({ outputDir: dir }),
+      setRememberPassphrase: (remember) =>
+        set((state) => ({
+          rememberPassphrase: remember,
+          // 如果不记住，清空已保存的口令
+          passphrase: remember ? state.passphrase : "",
+        })),
     }),
     {
       name: "file-store",
-      // 只持久化需要保存的字段
+      // 持久化需要保存的字段
       partialize: (state) => ({
         passphrase: state.passphrase,
         outputDir: state.outputDir,
+        rememberPassphrase: state.rememberPassphrase,
       }),
     }
   )

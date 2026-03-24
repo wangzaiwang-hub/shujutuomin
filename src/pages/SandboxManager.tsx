@@ -26,13 +26,14 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 export default function SandboxManager() {
   const { locked, files, setLocked, setFiles } = useSandboxStore();
-  const { passphrase, outputDir, setPassphrase, setOutputDir } = useFileStore();
+  const { passphrase, outputDir, rememberPassphrase, setPassphrase, setOutputDir, setRememberPassphrase } = useFileStore();
   
   // 本地状态
   const [pin, setPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [showPin, setShowPin] = useState(false);
+  const [showPassphrase, setShowPassphrase] = useState(false);
   const [showNewPin, setShowNewPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pathError, setPathError] = useState<string>("");
@@ -59,6 +60,24 @@ export default function SandboxManager() {
   useEffect(() => {
     loadFiles();
   }, [locked, outputDir]);
+
+  // 初始化：如果不记住口令，清空已保存的口令
+  useEffect(() => {
+    console.log("=== SandboxManager 初始化 ===");
+    console.log("Passphrase loaded:", passphrase ? `"${passphrase}"` : "(空)");
+    console.log("Remember passphrase:", rememberPassphrase);
+    console.log("Passphrase length:", passphrase.length);
+    
+    // 检查 localStorage
+    const stored = localStorage.getItem("file-store");
+    console.log("LocalStorage file-store:", stored ? JSON.parse(stored) : "(无)");
+    
+    if (!rememberPassphrase && passphrase) {
+      console.log("Clearing passphrase because rememberPassphrase is false");
+      setPassphrase("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 验证PIN
   const handleUnlock = async () => {
@@ -286,15 +305,42 @@ export default function SandboxManager() {
                   用于脱敏映射文件的加密，设置后会自动应用到文件处理
                 </p>
                 <div className="flex gap-2 max-w-md">
-                  <Input
-                    type="password"
-                    placeholder="加密口令"
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                  />
+                  <div className="relative flex-1">
+                    <Input
+                      type={showPassphrase ? "text" : "password"}
+                      placeholder="加密口令"
+                      value={passphrase}
+                      onChange={(e) => setPassphrase(e.target.value)}
+                      className="pr-10"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowPassphrase(!showPassphrase)}
+                    >
+                      {showPassphrase ? (
+                        <EyeOff className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-gray-500" />
+                      )}
+                    </Button>
+                  </div>
                   <Button variant="outline" size="icon" onClick={generatePassphrase}>
                     <RefreshCw className="w-4 h-4" />
                   </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember-passphrase"
+                    checked={rememberPassphrase}
+                    onChange={(e) => setRememberPassphrase(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="remember-passphrase" className="text-sm text-gray-700 cursor-pointer">
+                    记住解密口令（下次自动填充）
+                  </label>
                 </div>
               </div>
 
