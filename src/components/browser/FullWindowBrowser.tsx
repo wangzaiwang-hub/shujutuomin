@@ -32,8 +32,9 @@ export default function FullWindowBrowser({
           </>
         ) : (
           <>
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">正在跳转到浏览器...</p>
+            <Loader2 className="w-10 h-10 animate-spin mx-auto mb-6 text-blue-600" />
+            <p className="text-lg font-semibold text-gray-800 mb-2">CheersAI</p>
+            <p className="text-sm text-gray-500">让数据留在本地，让 AI 能力走在前沿</p>
           </>
         )}
       </div>
