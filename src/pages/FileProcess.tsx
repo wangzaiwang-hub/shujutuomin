@@ -327,6 +327,19 @@ export default function FileProcess() {
             />
           </div>
         </div>
+
+        {/* 使用说明 */}
+        <div className="mt-8 p-6 bg-blue-50/60 border border-blue-100 rounded-xl">
+          <h3 className="text-sm font-bold text-blue-900 mb-3">使用说明</h3>
+          <ol className="space-y-2 text-sm text-blue-700">
+            <li>1. 拖放或点击选择需要脱敏的文件（支持 CSV、Excel、JSON、TXT、Word、PPT、PDF、Markdown）</li>
+            <li>2. 在右侧选择需要启用的脱敏规则（如身份证号、手机号、邮箱等）</li>
+            <li>3. 输入映射加密口令（可选，用于生成可逆的脱敏映射文件）</li>
+            <li>4. 点击"选择输出目录"指定脱敏后文件的保存位置</li>
+            <li>5. 点击"开始处理"，预览脱敏效果并确认后执行脱敏</li>
+            <li>6. 脱敏完成后，输出目录中将生成脱敏文件和对照映射文件（.cmap）</li>
+          </ol>
+        </div>
       </div>
 
       {/* 脱敏预览对话框 */}
