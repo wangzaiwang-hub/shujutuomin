@@ -9,30 +9,36 @@ pub struct SandboxFile {
     pub modified: String,
 }
 
-// 简单的PIN存储（实际应用中应该使用更安全的方式）
-use std::sync::Mutex;
-use std::sync::LazyLock;
+use crate::core::dpapi;
 
-static STORED_PIN: LazyLock<Mutex<Option<String>>> = LazyLock::new(|| Mutex::new(None));
-
+/// 检查是否已设置 PIN（用于前端判断显示"设置PIN"还是"输入PIN"）
 #[tauri::command]
-pub async fn verify_pin(pin: String) -> Result<bool, String> {
-    let stored_pin = STORED_PIN.lock().map_err(|_| "Failed to access PIN storage")?;
-    match stored_pin.as_ref() {
-        Some(stored) => Ok(stored == &pin),
-        None => Ok(false), // 没有设置PIN时返回false
-    }
+pub async fn has_pin() -> Result<bool, String> {
+    Ok(dpapi::has_pin())
 }
 
+/// 验证 PIN（使用 Windows DPAPI 解密后比对）
+#[tauri::command]
+pub async fn verify_pin(pin: String) -> Result<bool, String> {
+    if !dpapi::has_pin() {
+        return Err("尚未设置 PIN，请先设置".to_string());
+    }
+    dpapi::verify_pin(&pin)
+}
+
+/// 设置 PIN（使用 Windows DPAPI 加密后持久化存储）
 #[tauri::command]
 pub async fn set_pin(pin: String) -> Result<(), String> {
     if pin.len() < 4 {
-        return Err("PIN must be at least 4 characters".to_string());
+        return Err("PIN 至少需要 4 位".to_string());
     }
-    
-    let mut stored_pin = STORED_PIN.lock().map_err(|_| "Failed to access PIN storage")?;
-    *stored_pin = Some(pin);
-    Ok(())
+    dpapi::save_pin(&pin)
+}
+
+/// 清除 PIN
+#[tauri::command]
+pub async fn clear_pin() -> Result<(), String> {
+    dpapi::clear_pin()
 }
 
 #[tauri::command]
@@ -287,6 +293,60 @@ pub async fn clear_sandbox_dir() -> Result<String, String> {
     } else {
         Ok("沙箱目录不存在".to_string())
     }
+}
+
+/// 锁定沙箱文件：将指定目录中的所有文件设为隐藏+系统属性
+#[tauri::command]
+pub async fn lock_sandbox_files(directory: String) -> Result<String, String> {
+    let dir_path = Path::new(&directory);
+    if !dir_path.exists() {
+        return Ok("目录不存在".to_string());
+    }
+
+    let mut count = 0;
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(entries) = std::fs::read_dir(dir_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    let _ = std::process::Command::new("attrib")
+                        .args(["+h", "+s", &path.to_string_lossy()])
+                        .output();
+                    count += 1;
+                }
+            }
+        }
+    }
+
+    Ok(format!("已隐藏 {} 个文件", count))
+}
+
+/// 解锁沙箱文件：将指定目录中的所有文件取消隐藏+系统属性
+#[tauri::command]
+pub async fn unlock_sandbox_files(directory: String) -> Result<String, String> {
+    let dir_path = Path::new(&directory);
+    if !dir_path.exists() {
+        return Ok("目录不存在".to_string());
+    }
+
+    let mut count = 0;
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(entries) = std::fs::read_dir(dir_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    let _ = std::process::Command::new("attrib")
+                        .args(["-h", "-s", &path.to_string_lossy()])
+                        .output();
+                    count += 1;
+                }
+            }
+        }
+    }
+
+    Ok(format!("已显示 {} 个文件", count))
 }
 
 /// 格式化时间戳为可读格式

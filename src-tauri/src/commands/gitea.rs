@@ -20,7 +20,7 @@ pub struct GiteaConfigState {
 impl Default for GiteaConfigState {
     fn default() -> Self {
         Self {
-            url: String::new(),
+            url: "https://uat-filebay.cheersai.cloud".to_string(),
             token: String::new(),
             owner: String::new(),
             repo: String::new(),
@@ -179,7 +179,7 @@ pub async fn test_gitea_connection(
     let config = state.config.lock().await;
 
     if config.url.is_empty() || config.token.is_empty() {
-        return Err("请先配置 Gitea URL 和 Token".to_string());
+        return Err("请先配置 FileBay Token".to_string());
     }
 
     let gitea_config = GiteaConfig {
@@ -193,13 +193,13 @@ pub async fn test_gitea_connection(
 
     // 尝试获取用户信息来测试连接
     match client.check_repo_exists().await {
-        Ok(_) => Ok("连接成功！Gitea 服务器可访问".to_string()),
+        Ok(_) => Ok("连接成功！FileBay 服务器可访问".to_string()),
         Err(e) => {
             let error_msg = e.to_string();
             if error_msg.contains("invalid username, password or token") {
                 Err("认证失败：Token 无效或权限不足。请检查：\n1. Token 是否正确\n2. Token 是否有 repo 权限\n3. 用户名是否正确".to_string())
             } else if error_msg.contains("404") {
-                Err("URL 错误：无法找到 Gitea API。请检查：\n1. URL 是否正确（例如：http://localhost:3000）\n2. 不要包含 /api 路径".to_string())
+                Err("URL 错误：无法找到 FileBay API".to_string())
             } else {
                 Err(format!("连接失败：{}", error_msg))
             }
@@ -216,7 +216,7 @@ pub async fn create_gitea_repo(
     let config = state.config.lock().await;
 
     if !config.enabled {
-        return Err("Gitea 功能未启用".to_string());
+        return Err("FileBay 功能未启用".to_string());
     }
 
     let gitea_config = GiteaConfig {
@@ -246,7 +246,7 @@ pub async fn create_gitea_repo(
                     if error_msg.contains("invalid username, password or token") {
                         Err("❌ 创建失败：Token 认证失败\n\n请检查：\n1. Token 是否正确\n2. Token 是否有 repo 权限\n3. 用户名是否正确".to_string())
                     } else if error_msg.contains("404") {
-                        Err("❌ 创建失败：URL 配置错误\n\nGitea 服务器地址应该是类似 http://localhost:8080 的格式，不要包含 /api 路径".to_string())
+                        Err("❌ 创建失败：URL 配置错误".to_string())
                     } else {
                         Err(format!("❌ 创建仓库失败：{}", error_msg))
                     }
@@ -281,7 +281,7 @@ pub async fn upload_to_gitea(
     let config = state.config.lock().await;
 
     if !config.enabled {
-        return Err("Gitea 功能未启用".to_string());
+        return Err("FileBay 功能未启用".to_string());
     }
 
     let gitea_config = GiteaConfig {
@@ -330,7 +330,7 @@ pub async fn upload_batch_to_gitea(
     let config = state.config.lock().await;
 
     if !config.enabled {
-        return Err("Gitea 功能未启用".to_string());
+        return Err("FileBay 功能未启用".to_string());
     }
 
     let gitea_config = GiteaConfig {

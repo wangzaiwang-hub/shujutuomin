@@ -125,6 +125,14 @@ pub fn save_encrypted_mapping(
     fs::write(path, encrypted)
         .map_err(|e| format!("Failed to write mapping file: {}", e))?;
 
+    // Windows: 确保 .cmap 文件不被隐藏
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("attrib")
+            .args(["-h", "-s", path])
+            .output();
+    }
+
     Ok(())
 }
 

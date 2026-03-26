@@ -47,8 +47,10 @@ pub fn run() {
             crypto::generate_passphrase,
             crypto::encrypt_mapping,
             crypto::decrypt_mapping,
+            sandbox::has_pin,
             sandbox::verify_pin,
             sandbox::set_pin,
+            sandbox::clear_pin,
             sandbox::list_sandbox_files,
             sandbox::list_files_in_directory,
             sandbox::export_sandbox,
@@ -103,6 +105,8 @@ pub fn run() {
             sandbox::get_sandbox_dir_path,
             sandbox::open_sandbox_dir,
             sandbox::clear_sandbox_dir,
+            sandbox::lock_sandbox_files,
+            sandbox::unlock_sandbox_files,
         ])
         .setup(|_app| {
             println!("=== Tauri Setup Complete ===");

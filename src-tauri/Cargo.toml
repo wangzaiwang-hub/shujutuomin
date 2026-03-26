@@ -43,9 +43,12 @@ pulldown-cmark = "0.9"
 encoding_rs = "0.8"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
 chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["json", "multipart"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "multipart", "rustls-tls"] }
 url = "2.4"
 pdf-extract = "0.7"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Security_Cryptography", "Win32_Foundation"] }
 
 [profile.release]
 opt-level = "z"
