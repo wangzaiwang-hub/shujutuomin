@@ -10,7 +10,7 @@ export function GiteaSettings() {
   const [testing, setTesting] = useState(false);
   
   const [config, setConfig] = useState({
-    url: '',
+    url: 'https://uat-filebay.cheersai.cloud',
     token: '',
     owner: '',
     repo: '',
@@ -36,6 +36,20 @@ export function GiteaSettings() {
       }));
     } catch (error) {
       console.error('Failed to load Gitea status:', error);
+      // 设置默认状态，避免一直加载
+      setStatus({
+        enabled: false,
+        configured: false,
+        repo_exists: null,
+        config: {
+          url: 'https://uat-filebay.cheersai.cloud',
+          token: '',
+          owner: '',
+          repo: '',
+          enabled: false,
+          has_token: false,
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -190,14 +204,10 @@ export function GiteaSettings() {
           </label>
           <input
             type="url"
-            value={config.url}
-            onChange={(e) => setConfig({ ...config, url: e.target.value })}
-            placeholder="https://filebay.example.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value="https://uat-filebay.cheersai.cloud"
+            disabled
+            className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600 cursor-not-allowed"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            例如: http://localhost:3001 或 https://filebay.example.com
-          </p>
         </div>
 
         {/* Access Token */}

@@ -3,6 +3,15 @@ import { invoke } from '@tauri-apps/api/core';
 import { uploadToGitea, getGiteaStatus } from '../../services/gitea';
 import { useFileStore } from '../../store/fileStore';
 import Toast from '../common/Toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface SandboxFile {
   name: string;
@@ -25,6 +34,12 @@ export function FileManager() {
   const [giteaEnabled, setGiteaEnabled] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
   useEffect(() => {
     if (outputDir) {
@@ -73,41 +88,50 @@ export function FileManager() {
     setFiles(filtered);
   };
 
-  const handleDelete = async (filePath: string) => {
-    if (!confirm('确定要删除这个文件吗？')) {
-      return;
-    }
-
-    try {
-      await invoke<string>('delete_sandbox_file', { filePath });
-      loadFiles();
-      alert('文件已删除');
-    } catch (error) {
-      console.error('Delete failed:', error);
-      alert('删除失败: ' + error);
-    }
+  const handleDelete = (filePath: string) => {
+    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    setConfirmDialog({
+      open: true,
+      title: '确认删除',
+      description: `确定要删除文件「${fileName}」吗？此操作不可撤销。`,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        try {
+          await invoke<string>('delete_sandbox_file', { filePath });
+          loadFiles();
+          setToast({ message: '文件已删除', type: 'success' });
+        } catch (error) {
+          console.error('Delete failed:', error);
+          setToast({ message: '删除失败: ' + error, type: 'error' });
+        }
+      },
+    });
   };
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedFiles.size === 0) {
-      alert('请先选择要删除的文件');
+      setToast({ message: '请先选择要删除的文件', type: 'info' });
       return;
     }
 
-    if (!confirm(`确定要删除选中的 ${selectedFiles.size} 个文件吗？`)) {
-      return;
-    }
-
-    try {
-      const filePaths = Array.from(selectedFiles);
-      const result = await invoke<string>('delete_sandbox_files', { filePaths });
-      setSelectedFiles(new Set());
-      loadFiles();
-      alert(result);
-    } catch (error) {
-      console.error('Batch delete failed:', error);
-      alert('批量删除失败: ' + error);
-    }
+    setConfirmDialog({
+      open: true,
+      title: '批量删除确认',
+      description: `确定要删除选中的 ${selectedFiles.size} 个文件吗？此操作不可撤销。`,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        try {
+          const filePaths = Array.from(selectedFiles);
+          const result = await invoke<string>('delete_sandbox_files', { filePaths });
+          setSelectedFiles(new Set());
+          loadFiles();
+          setToast({ message: result, type: 'success' });
+        } catch (error) {
+          console.error('Batch delete failed:', error);
+          setToast({ message: '批量删除失败: ' + error, type: 'error' });
+        }
+      },
+    });
   };
 
   const handleUploadToGitea = async (file: SandboxFile) => {
@@ -139,28 +163,6 @@ export function FileManager() {
     }
   };
 
-  const handleOpenSandboxDir = async () => {
-    if (!outputDir) {
-      alert('请先设置输出目录');
-      return;
-    }
-
-    try {
-      // 使用系统命令打开目录
-      const { Command } = await import('@tauri-apps/plugin-shell');
-      
-      if (window.navigator.platform.toLowerCase().includes('win')) {
-        await Command.create('explorer', [outputDir]).execute();
-      } else if (window.navigator.platform.toLowerCase().includes('mac')) {
-        await Command.create('open', [outputDir]).execute();
-      } else {
-        await Command.create('xdg-open', [outputDir]).execute();
-      }
-    } catch (error) {
-      console.error('Failed to open directory:', error);
-      alert('打开目录失败: ' + error);
-    }
-  };
 
   const handleClearAll = async () => {
     if (!outputDir) {
@@ -168,24 +170,28 @@ export function FileManager() {
       return;
     }
 
-    if (!confirm('确定要清空输出目录吗？这将删除所有文件！')) {
+    const filePaths = files.map(f => f.path);
+    if (filePaths.length === 0) {
+      setToast({ message: '目录已经是空的', type: 'info' });
       return;
     }
 
-    try {
-      const filePaths = files.map(f => f.path);
-      if (filePaths.length === 0) {
-        alert('目录已经是空的');
-        return;
-      }
-
-      const result = await invoke<string>('delete_sandbox_files', { filePaths });
-      loadFiles();
-      alert(result);
-    } catch (error) {
-      console.error('Clear failed:', error);
-      alert('清空失败: ' + error);
-    }
+    setConfirmDialog({
+      open: true,
+      title: '清空目录确认',
+      description: `确定要清空输出目录中的 ${filePaths.length} 个文件吗？此操作不可撤销！`,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        try {
+          const result = await invoke<string>('delete_sandbox_files', { filePaths });
+          loadFiles();
+          setToast({ message: result, type: 'success' });
+        } catch (error) {
+          console.error('Clear failed:', error);
+          setToast({ message: '清空失败: ' + error, type: 'error' });
+        }
+      },
+    });
   };
 
   const toggleFileSelection = (path: string) => {
@@ -213,10 +219,25 @@ export function FileManager() {
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
   };
 
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleString('zh-CN');
-  };
+
+  if (!outputDir) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">文件管理</h2>
+          <p className="text-gray-600">管理输出目录中的脱敏文件</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl">
+          <div className="text-5xl mb-4">📁</div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">尚未配置输出目录</h3>
+          <p className="text-sm text-gray-500 mb-6">请先前往「文件脱敏」页面，点击「选择输出目录」完成配置</p>
+          <a href="/process" className="px-4 py-2 bg-indigo-500 text-white text-sm rounded-md hover:bg-indigo-600 transition-colors">
+            前往文件脱敏
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && files.length === 0) {
     return (
@@ -235,15 +256,9 @@ export function FileManager() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">文件管理</h2>
         <p className="text-gray-600">管理输出目录中的脱敏文件</p>
-        {outputDir ? (
-          <p className="text-sm text-gray-500 mt-1">
-            输出目录: <code className="bg-gray-100 px-2 py-1 rounded">{outputDir}</code>
-          </p>
-        ) : (
-          <p className="text-sm text-yellow-600 mt-1">
-            ⚠️ 请先在"文件脱敏"页面设置输出目录
-          </p>
-        )}
+        <p className="text-sm text-gray-500 mt-1">
+          输出目录: <code className="bg-gray-100 px-2 py-1 rounded">{outputDir}</code>
+        </p>
       </div>
 
       {/* 统计卡片 */}
@@ -292,12 +307,6 @@ export function FileManager() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleOpenSandboxDir}
-            className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
-          >
-            打开目录
-          </button>
-          <button
             onClick={loadFiles}
             className="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50"
           >
@@ -345,9 +354,6 @@ export function FileManager() {
                 大小
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                修改时间
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
               </th>
             </tr>
@@ -355,7 +361,7 @@ export function FileManager() {
           <tbody className="bg-white divide-y divide-gray-200">
             {files.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                   暂无文件。脱敏后的文件会自动保存到沙箱目录。
                 </td>
               </tr>
@@ -383,9 +389,6 @@ export function FileManager() {
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {formatFileSize(file.size)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {formatDate(file.modified)}
-                  </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
                       <button
@@ -410,6 +413,24 @@ export function FileManager() {
           </tbody>
         </table>
       </div>
+
+      {/* 确认删除弹窗 */}
+      <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription>{confirmDialog.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}>
+              取消
+            </Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDialog.onConfirm}>
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Toast 通知 */}
       {toast && (

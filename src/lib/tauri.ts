@@ -41,11 +41,23 @@ export const tauriCommands = {
     invoke<{ output_path: string; restored_count: number }>("unmask_file", { options }),
 
   // Sandbox
+  hasPin: () =>
+    invoke<boolean>("has_pin"),
+
   verifyPin: (pin: string) =>
     invoke<boolean>("verify_pin", { pin }),
 
   setPin: (pin: string) =>
     invoke<void>("set_pin", { pin }),
+
+  clearPin: () =>
+    invoke<void>("clear_pin"),
+
+  lockSandboxFiles: (directory: string) =>
+    invoke<string>("lock_sandbox_files", { directory }),
+
+  unlockSandboxFiles: (directory: string) =>
+    invoke<string>("unlock_sandbox_files", { directory }),
 
   listSandboxFiles: () =>
     invoke<SandboxFile[]>("list_sandbox_files"),

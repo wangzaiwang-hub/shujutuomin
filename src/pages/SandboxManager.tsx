@@ -5,6 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { 
   Lock, 
   Unlock, 
@@ -15,7 +23,10 @@ import {
   EyeOff,
   Save,
   RefreshCw,
-  Info
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle
 } from "lucide-react";
 import { useSandboxStore } from "@/store/sandboxStore";
 import { useFileStore } from "@/store/fileStore";
@@ -37,6 +48,22 @@ export default function SandboxManager() {
   const [showNewPin, setShowNewPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pathError, setPathError] = useState<string>("");
+  const [pinExists, setPinExists] = useState<boolean | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
+
+  // toast 自动消失
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // 获取当前平台信息
   const platform = getPlatform();
@@ -60,6 +87,33 @@ export default function SandboxManager() {
   useEffect(() => {
     loadFiles();
   }, [locked, outputDir]);
+
+  // 检查是否已设置 PIN（DPAPI 持久化）
+  useEffect(() => {
+    const checkPin = async () => {
+      try {
+        const exists = await tauriCommands.hasPin();
+        setPinExists(exists);
+        if (!exists) {
+          setLocked(false);
+          // 没有 PIN 时确保文件可见
+          if (outputDir) {
+            await tauriCommands.unlockSandboxFiles(outputDir);
+          }
+        } else {
+          // 有 PIN 且应用刚启动时，确保文件隐藏
+          if (outputDir) {
+            await tauriCommands.lockSandboxFiles(outputDir);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check PIN status:", error);
+        setPinExists(false);
+        setLocked(false);
+      }
+    };
+    checkPin();
+  }, []);
 
   // 初始化：如果不记住口令，清空已保存的口令
   useEffect(() => {
@@ -87,14 +141,18 @@ export default function SandboxManager() {
     try {
       const ok = await tauriCommands.verifyPin(pin);
       if (ok) {
+        // 解锁时取消文件隐藏
+        if (outputDir) {
+          await tauriCommands.unlockSandboxFiles(outputDir);
+        }
         setLocked(false);
         setPin("");
         await loadFiles();
       } else {
-        alert("PIN 错误");
+        setToast({ message: 'PIN 错误，请重试', type: 'error' });
       }
     } catch (error) {
-      alert("验证失败");
+      setToast({ message: '验证失败', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -103,12 +161,12 @@ export default function SandboxManager() {
   // 设置新PIN
   const handleSetPin = async () => {
     if (!newPin || newPin !== confirmPin) {
-      alert("PIN 不匹配");
+      setToast({ message: 'PIN 不匹配，请重新输入', type: 'warning' });
       return;
     }
     
     if (newPin.length < 4) {
-      alert("PIN 至少需要4位");
+      setToast({ message: 'PIN 至少需要 4 位', type: 'warning' });
       return;
     }
 
@@ -117,12 +175,43 @@ export default function SandboxManager() {
       await tauriCommands.setPin(newPin);
       setNewPin("");
       setConfirmPin("");
-      alert("PIN 设置成功");
+      setPinExists(true);
+      setToast({ message: 'PIN 设置成功，已使用 Windows DPAPI 加密存储', type: 'success' });
+      // 延迟锁定并隐藏文件
+      setTimeout(async () => {
+        if (outputDir) {
+          await tauriCommands.lockSandboxFiles(outputDir);
+        }
+        setLocked(true);
+      }, 1500);
     } catch (error) {
-      alert("PIN 设置失败");
+      setToast({ message: 'PIN 设置失败: ' + error, type: 'error' });
     } finally {
       setLoading(false);
     }
+  };
+
+  // 清除 PIN
+  const handleClearPin = () => {
+    setConfirmDialog({
+      open: true,
+      title: '清除 PIN',
+      description: '确定要清除 PIN 吗？清除后沙箱将不再需要密码访问。',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        setLoading(true);
+        try {
+          await tauriCommands.clearPin();
+          setPinExists(false);
+          setLocked(false);
+          setToast({ message: 'PIN 已清除', type: 'success' });
+        } catch (error) {
+          setToast({ message: '清除 PIN 失败: ' + error, type: 'error' });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // 选择输出路径（跨平台）
@@ -187,8 +276,13 @@ export default function SandboxManager() {
         description="安全设置和文件输出配置"
         actions={
           <div className="flex gap-2">
-            {!locked && (
-              <Button size="sm" variant="outline" onClick={() => setLocked(true)}>
+            {!locked && pinExists && (
+              <Button size="sm" variant="outline" onClick={async () => {
+                if (outputDir) {
+                  await tauriCommands.lockSandboxFiles(outputDir);
+                }
+                setLocked(true);
+              }}>
                 <Lock className="w-4 h-4 mr-1" />
                 锁定沙箱
               </Button>
@@ -210,10 +304,22 @@ export default function SandboxManager() {
                   <Unlock className="w-5 h-5 text-green-500" />
                 )}
                 沙箱状态
+                <span className="ml-auto px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                  Windows DPAPI 加密
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {locked ? (
+              {pinExists === null ? (
+                <p className="text-sm text-gray-500">正在检查 PIN 状态...</p>
+              ) : !pinExists ? (
+                <div className="space-y-3">
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">⚠️ 尚未设置 PIN，沙箱当前无密码保护。请在下方「安全设置」中设置 PIN。</p>
+                  </div>
+                  <p className="text-xs text-gray-500">PIN 将使用 Windows DPAPI 加密存储，绑定当前 Windows 用户账户，重启应用后仍然有效。</p>
+                </div>
+              ) : locked ? (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600">沙箱已锁定，请输入 PIN 解锁</p>
                   <div className="flex gap-2 max-w-md">
@@ -238,10 +344,11 @@ export default function SandboxManager() {
                       解锁
                     </Button>
                   </div>
+                  <p className="text-xs text-gray-500">PIN 已通过 Windows DPAPI 加密存储，仅当前 Windows 用户可解密。</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm text-green-600">沙箱已解锁，可以访问安全文件</p>
+                  <p className="text-sm text-green-600">✅ 沙箱已解锁，可以访问安全文件</p>
                   <div className="text-sm text-gray-600">
                     文件数量: {files.length} 个
                   </div>
@@ -286,14 +393,27 @@ export default function SandboxManager() {
                     onChange={(e) => setConfirmPin(e.target.value)}
                   />
                 </div>
-                <Button 
-                  onClick={handleSetPin} 
-                  disabled={!newPin || !confirmPin || loading}
-                  size="sm"
-                >
-                  <Save className="w-4 h-4 mr-1" />
-                  设置 PIN
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleSetPin} 
+                    disabled={!newPin || !confirmPin || loading}
+                    size="sm"
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    {pinExists ? '重新设置 PIN' : '设置 PIN'}
+                  </Button>
+                  {pinExists && (
+                    <Button 
+                      onClick={handleClearPin} 
+                      disabled={loading}
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                    >
+                      清除 PIN
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <Separator />
@@ -459,6 +579,43 @@ export default function SandboxManager() {
           )}
         </div>
       </div>
+
+      {/* Toast 通知 */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border ${
+            toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            'bg-yellow-50 border-yellow-200 text-yellow-800'
+          }`}>
+            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
+            {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
+            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0" />}
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 确认弹窗 */}
+      <Dialog open={confirmDialog.open} onOpenChange={(v) => !v && setConfirmDialog(prev => ({ ...prev, open: false }))}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription>{confirmDialog.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDialog.onConfirm}
+            >
+              确认
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
