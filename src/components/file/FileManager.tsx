@@ -136,7 +136,7 @@ export function FileManager() {
 
   const handleUploadToGitea = async (file: SandboxFile) => {
     if (!giteaEnabled) {
-      setToast({ message: '请先在 Gitea 设置中完成配置', type: 'info' });
+      setToast({ message: '请先在 FileBay 设置中完成配置', type: 'info' });
       return;
     }
 
