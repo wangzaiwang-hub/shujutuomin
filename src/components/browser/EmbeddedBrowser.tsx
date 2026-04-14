@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   ArrowLeft, 
   ArrowRight, 
   RotateCcw, 
@@ -13,6 +13,7 @@ import {
   Bug
 } from "lucide-react";
 import { tauriCommands } from "@/lib/tauri";
+import { CLOUD_APP_URL, resolveCloudUrl } from "@/lib/cloud";
 
 interface EmbeddedBrowserProps {
   initialUrl?: string;
@@ -20,7 +21,7 @@ interface EmbeddedBrowserProps {
 }
 
 export default function EmbeddedBrowser({ 
-  initialUrl = "https://7smile.dlithink.com/cheersai_desktop/apps/",
+  initialUrl = CLOUD_APP_URL,
   onUrlChange 
 }: EmbeddedBrowserProps) {
   const [currentUrl, setCurrentUrl] = useState(initialUrl);
@@ -398,7 +399,7 @@ export default function EmbeddedBrowser({
             // 构建完整 URL
             const fullLoginUrl = loginUrl.startsWith('http') 
               ? loginUrl 
-              : `https://7smile.dlithink.com${loginUrl.startsWith('/') ? '' : '/'}${loginUrl}`;
+              : resolveCloudUrl(loginUrl);
             
             console.log("Auto-redirecting to:", fullLoginUrl);
             setTimeout(() => {
@@ -460,7 +461,7 @@ export default function EmbeddedBrowser({
     if (iframeRef.current) {
       try {
         // 直接尝试导航到登录页面
-        handleNavigate('https://7smile.dlithink.com/login');
+        handleNavigate(resolveCloudUrl("/login"));
       } catch (error) {
         console.error("Failed to force redirect:", error);
       }

@@ -1,6 +1,8 @@
 use reqwest;
 use serde::{Deserialize, Serialize};
 
+const DEFAULT_CLOUD_ORIGIN: &str = "https://uat-desktop.cheersai.cloud";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProxyResponse {
     pub content: String,
@@ -75,6 +77,6 @@ fn extract_base_domain(url: &str) -> String {
     if let Ok(parsed) = url::Url::parse(url) {
         format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""))
     } else {
-        "https://7smile.dlithink.com".to_string()
+        DEFAULT_CLOUD_ORIGIN.to_string()
     }
 }
